@@ -2,6 +2,7 @@ import os
 import shutil
 from typing import Optional
 
+import medicaltorch.transforms as mt
 import pandas as pd
 import torchvision.transforms as T
 from pytorch_lightning import LightningDataModule
@@ -29,6 +30,7 @@ class mri_DataLoader(LightningDataModule):
             self.val = dataset.drop(self.train.index)
 
             # Move data to val folder
+            print('Moving data...')
             if not os.path.isdir(self.config.VALIDATION_DIR):
                 os.mkdir(self.config.VALIDATION_DIR)
 
@@ -42,18 +44,22 @@ class mri_DataLoader(LightningDataModule):
     def train_dataloader(self):
         transform = T.Compose([
             T.ToTensor(),
+            # T.Resize(size=(640, 640)),
             T.RandomHorizontalFlip(p=0.5),
-            T.RandomCrop(60),
-            T.RandomAffine(degrees=(0, 90), translate=(10, 10), shear=(10, 20)),
-            T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+            T.RandomResizedCrop(size=640, scale=(0.8, 1.0)),
+            T.RandomAffine(degrees=(0, 90)),
+            mt.NormalizeInstance()
         ])
         return DataLoader(
-            dataset=mri_dataset(df=self.train, transform=transform, load_in_memory=True,
-                                directory=self.config.TRAIN_DIR),
-            shuffle=True, batch_size=64)
+            dataset=mri_dataset(df=self.train, transform=transform, directory=self.config.TRAIN_DIR)
+            , num_workers=1, batch_size=32, persistent_workers=True, prefetch_factor=1, pin_memory=True)
 
     def val_dataloader(self):
-        transform = ToTensorV2()
-        return DataLoader(dataset=mri_dataset(df=self.val, load_in_memory=True, directory=self.config.VALIDATION_DIR,
-                                              transform=transform),
-                          batch_size=64)
+        transform = T.Compose([
+            T.ToTensor(),
+            # T.Resize(size=(640, 640)),
+            mt.NormalizeInstance()
+        ])
+        return DataLoader(dataset=mri_dataset(df=self.val, directory=self.config.VALIDATION_DIR,
+                                              transform=transform), num_workers=1, batch_size=32,
+                          persistent_workers=True)

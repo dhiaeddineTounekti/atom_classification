@@ -2,7 +2,7 @@ import os
 
 
 class Config:
-    WORKING_DIR = 'C:\\Users\\dhiae\\kaggle_RANZCR'
+    WORKING_DIR = 'C:\\Users\\dhiae\\RANZ_kaggle'
     DATA_DIR = os.path.join(WORKING_DIR, 'data')
     TRAIN_DIR = os.path.join(DATA_DIR, 'train')
     VALIDATION_DIR = os.path.join(DATA_DIR, 'val')

@@ -11,17 +11,18 @@ class mri_dataset(Dataset):
         if image_size is None:
             image_size = [640, 640]
         self.transform = transform
-        self.image_names = df.iloc[:100, 1].values
+        self.image_names = df.iloc[:1000, 1].values
         self.labels = df.iloc[:, 2:13].values
         self.data_dir = directory
         self.pre_transformations = A.Compose([
             A.Resize(*image_size),
         ])
+        self.load_in_memory = load_in_memory
         if load_in_memory:
             self.images = self.read_all_images_in_memory()
 
     def read_all_images_in_memory(self):
-        compression_param = [cv2.IMWRITE_JPEG_QUALITY, 95]
+        compression_param = [cv2.IMWRITE_JPEG_QUALITY, 90]
         result = []
         count = 0
         total_memory_consumption = 0
@@ -37,17 +38,22 @@ class mri_dataset(Dataset):
             if count % 200 == 0:
                 print(f'Loading images: {count}/{len(self.labels)}')
 
-        print(f'Total memory consumption: {total_memory_consumption/(1024*1024*1024)} GB')
+        print(f'Total memory consumption: {total_memory_consumption / (1024 * 1024 * 1024)} GB')
         return result
 
     def __len__(self):
-        return len(self.images)
+        return len(self.image_names)
 
     def __getitem__(self, idx):
-        image = cv2.imdecode(self.images[idx], 1)
+        if self.load_in_memory:
+            image = cv2.imdecode(self.images[idx], 1)
+        else:
+            image_id = self.image_names[idx]
+            image = cv2.imread(os.path.join(self.data_dir, str(image_id) + '_compressed.jpg'))
+
         target = self.labels[idx].astype(numpy.float32)
 
         if self.transform is not None:
-            image = self.transform(image=image)['image']
+            image = self.transform(image)
 
         return image, target
