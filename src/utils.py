@@ -3,7 +3,8 @@ import os
 import albumentations
 import cv2
 import matplotlib.pyplot as plt
-from torch import Tensor
+import torch
+from torch import Tensor, nn
 
 from config import Config
 
@@ -34,3 +35,15 @@ def compress_images():
             image = albumentations.Resize(640, 640)(image=image)['image']
             cv2.imwrite(filename=os.path.join(directory, image_name.replace('.jpg', '_compressed.jpg')), img=image,
                         params=[int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
+
+def threshold(tensor: torch.Tensor, threshold: float) -> torch.Tensor:
+    """
+    Take the tensor and change the probabilities to binary tensor
+    :param tensor:
+    :param threshold:
+    :return:
+    """
+    filter_1 = nn.Threshold(-threshold, value=-1)
+    filter_0 = nn.Threshold(threshold, 0)
+    return filter_0(-filter_1(tensor * (-1.0)))
